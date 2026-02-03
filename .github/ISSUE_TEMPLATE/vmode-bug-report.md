@@ -1,10 +1,10 @@
 ---
-name: Bug Report
-about: Share bugs/issues you encountered
-title: "[Tool, Solution, or Feature Name] - A clear and concise description of what
-  the bug is"
-labels: bug
-assignees: ''
+name: vMode Bug Report
+about: Share bugs/issues encountered with vMode
+title: "[vMode][Tool, Solution, or Feature Name] - A clear and concise description
+  of what   the bug is"
+labels: bug, vMode
+assignees: davannaw-msft
 
 ---
 
