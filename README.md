@@ -1,13 +1,21 @@
 
 # Windows Admin Center Ideas & Feedback
 
-This github repo will only serve as a way for you to give your feedback and ideas to the Windows Admin Center team. Due to the migration away from UserVoice, we will be using this temporary solution in the interim to collect your invaluable feedback. This is a public repo so anyone can view its contents, so please keep this in mind as you provide feedback, as to not include any personal information. 
+This GitHub repo will only serve as a way for you to give your feedback and ideas to the Windows Admin Center team. We previously leveraged UserVoice to collect your invaluable feedback. 
+
+This is a public repository-- anyone can view its contents. Please keep this in mind as you provide feedback, and ensure you don't include any personal information. 
 
 ## Instructions
 
-To file a bug or feature request, please follow the steps to create an issue as shown on this [Creating an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue) page. We have already created 2 issue templates for you to use:
-- 🐞 Bug Report
-- 📃 Feature Request
+To file a bug or feature request, please follow the steps to create an issue as shown on this [Creating an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue) page. We have already created 4 issue templates for you to use:
+- 🐞 aMode Bug Report
+- 📃 aMode Feature Request
+- 🐞 vMode Bug Report
+- 📃 vMode Feature Request
+
+Not sure what we mean by "aMode" and "vMode"? Read about these designations [on our blog](https://techcommunity.microsoft.com/blog/windows-admin-center-blog/windows-admin-center-architectural-changes/4488583).
+
+Some bug reports and feature requests may apply to both Windows Admin Center modes. In this case, please file the issue under the template most relevant to your scenario and specify that the issue occurs in both modes if you have verification. The team will adjust the tags as needed. 
 
 ### Voting
 
