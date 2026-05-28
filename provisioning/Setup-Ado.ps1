@@ -47,10 +47,14 @@ New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
 
 Write-Host "=== Azure DevOps PAT setup ===" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Please create a PAT with these scopes:" -ForegroundColor Yellow
-Write-Host "  - Work Items: Read, write, & manage"
-Write-Host "  - Identity:   Read     (needed to look up area-path nodes)"
-Write-Host "Recommended lifetime: 90 days. Tag it 'wac-feedback-bot'."
+Write-Host "Create the PAT with these EXACT settings:" -ForegroundColor Yellow
+Write-Host "  Organization : $Organization   <-- NOT 'All accessible organizations'."
+Write-Host "                 (Global PATs are being deprecated; org-scoped is the only future-proof choice.)"
+Write-Host "  Expiration   : Custom defined, 90 days"
+Write-Host "  Scopes       : Custom defined (not a preset). Tick ALL of:"
+Write-Host "                   * Work Items        -> Read, write, & manage"
+Write-Host "                   * Project and Team  -> Read"
+Write-Host "  Name         : wac-feedback-bot"
 Write-Host ""
 $tokenUrl = "https://dev.azure.com/$Organization/_usersSettings/tokens"
 Write-Host ("PAT page: {0}" -f $tokenUrl)
