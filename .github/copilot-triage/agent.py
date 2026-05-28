@@ -223,7 +223,9 @@ def main(argv: list[str] | None = None) -> int:
             result = aoai.triage(issue, default_retriever(), debug_sink=debug)
         labels = _filter_labels(result.labels)
 
-        # 2. ADO work item (only if we don't already have one)
+        # 2. ADO work item (only if we don't already have one).
+        # ADO failures are non-fatal: customer reply + labels + notify still go out.
+        ado_error: str | None = None
         existing_ado_id = github_app.extract_ado_id(comments)
         if existing_ado_id:
             log.info("Issue #%s already linked to ADO #%s; not re-filing",
@@ -237,17 +239,24 @@ def main(argv: list[str] | None = None) -> int:
             ado_id = 0
             ado_url = "https://dev.azure.com/microsoft/OS/_workitems/edit/0"
         else:
-            ado = ado_client.AzureDevOpsClient()
-            wi = ado.create_work_item(
-                category=result.category,
-                title=result.ado_title,
-                description_html=result.ado_description_html,
-                github_issue_url=issue["html_url"],
-                tags=result.ado_tags,
-            )
-            ado_id = wi.id
-            ado_url = wi.url
-            debug["ado"] = {"id": ado_id, "url": ado_url, "type": wi.type}
+            try:
+                ado = ado_client.AzureDevOpsClient()
+                wi = ado.create_work_item(
+                    category=result.category,
+                    title=result.ado_title,
+                    description_html=result.ado_description_html,
+                    github_issue_url=issue["html_url"],
+                    tags=result.ado_tags,
+                )
+                ado_id = wi.id
+                ado_url = wi.url
+                debug["ado"] = {"id": ado_id, "url": ado_url, "type": wi.type}
+            except Exception as e:  # noqa: BLE001
+                log.warning("ADO work-item creation failed: %s — continuing with reply + labels only", e)
+                ado_error = str(e)
+                debug["ado_error"] = ado_error
+                ado_id = 0
+                ado_url = ""
 
         # 3. Render and post customer reply
         reply = _render_reply(
@@ -269,8 +278,11 @@ def main(argv: list[str] | None = None) -> int:
         else:
             assert gh is not None
             gh.post_comment(args.repo, issue["number"], reply)
+            label_set = list(labels)
+            if ado_id and ado_id > 0:
+                label_set.append("ado-linked")
             try:
-                gh.add_labels(args.repo, issue["number"], labels + ["ado-linked"])
+                gh.add_labels(args.repo, issue["number"], label_set)
             except github_app.GitHubError as e:
                 # Missing labels in the repo is non-fatal; log and continue.
                 log.warning("add_labels partial failure: %s", e)

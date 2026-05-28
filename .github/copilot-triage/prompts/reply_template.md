@@ -10,7 +10,11 @@ To help us reproduce and prioritize, could you confirm a few details?
 {% endfor %}
 {%- endif %}
 
+{% if ado_id and ado_id > 0 -%}
 We're tracking this internally as **{{ ado_link }}**. We'll post back on this issue when there's news.
+{%- else -%}
+We've routed this to the right area on our team and will follow up here when there's news.
+{%- endif %}
 
 — The Windows Admin Center team
 

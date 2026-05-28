@@ -85,7 +85,10 @@ def test_e2e_dry_run_with_mocked_llm(isolated_workdir, monkeypatch):
     # placeholder values, and the idempotency markers.
     reply = debug["reply_markdown"]
     assert "@fictional-customer" in reply
-    assert "ADO #0" in reply  # dry-run uses ado_id=0
+    # No ADO id was minted (dry-run / shadow), so the reply uses the
+    # neutral "routed to the right area" phrasing rather than ADO #0.
+    assert "routed this to the right area" in reply
+    assert "ado-id: 0" in reply  # HTML comment still records the unset id
     assert "<!-- triaged-by: wac-feedback-bot -->" in reply
     assert "<!-- ado-id: 0 -->" in reply
     assert "Full installer log" in reply
@@ -207,8 +210,8 @@ def test_e2e_shadow_mode_calls_llm_but_no_writes(isolated_workdir, monkeypatch):
     # Reply text was rendered (visible in artifact for inspection) but not posted
     assert "@fictional-customer" in debug["reply_markdown"]
     assert isinstance(debug["notify"], str) and "skipped" in debug["notify"]
-    # ADO id is the stand-in 0 because no work item was created
-    assert "ADO #0" in debug["reply_markdown"]
+    # No ADO id was minted in shadow mode — neutral phrasing.
+    assert "routed this to the right area" in debug["reply_markdown"]
 
 
 def test_e2e_writes_debug_artifact_even_on_failure(isolated_workdir, monkeypatch):
