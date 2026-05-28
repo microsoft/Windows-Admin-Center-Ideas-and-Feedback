@@ -70,6 +70,7 @@ if (-not $DryRun) {
 $ghApp = Read-State 'github-app.json'
 $aoai  = Read-State 'aoai.json'
 $ado   = Read-State 'ado.json'
+$adoEntra = Read-State 'ado-entra.json'
 $teams = Read-State 'teams.json'
 
 # Build the secret map. Each entry: (name, value, source-or-$null).
@@ -93,8 +94,8 @@ if ($aoai) {
 
 if ($ado) {
   $secrets += [pscustomobject]@{ Name='ADO_PAT';                 Value=$ado.pat }
-} else {
-  Write-Warning "ado.json missing — skipping ADO_PAT."
+} elseif (-not $adoEntra) {
+  Write-Warning "Neither ado.json (PAT) nor ado-entra.json (OIDC) present — ADO calls will be disabled."
 }
 
 if ($teams) {
@@ -135,6 +136,21 @@ if ($ado) {
   $vars += [pscustomobject]@{ Name='ADO_ORG';     Value=$ado.organization }
   $vars += [pscustomobject]@{ Name='ADO_PROJECT'; Value=$ado.project }
   $vars += [pscustomobject]@{ Name='ADO_AREA_PATH'; Value=$ado.area_path }
+}
+if ($adoEntra) {
+  # OIDC variables consumed by .github/workflows/triage-on-issue.yml. With
+  # AZURE_CLIENT_ID + AZURE_TENANT_ID set, the workflow does azure/login@v2
+  # via OIDC federation and mints an ADO bearer token at run time. No
+  # long-lived secret is stored.
+  $vars += [pscustomobject]@{ Name='AZURE_CLIENT_ID'; Value=$adoEntra.app_id }
+  $vars += [pscustomobject]@{ Name='AZURE_TENANT_ID'; Value=$adoEntra.tenant_id }
+  $vars += [pscustomobject]@{ Name='ADO_AUTH_MODE';   Value='entra' }
+  # If org/project/area-path didn't come from ado.json, default them here.
+  if (-not $ado) {
+    $vars += [pscustomobject]@{ Name='ADO_ORG';       Value='microsoft' }
+    $vars += [pscustomobject]@{ Name='ADO_PROJECT';   Value='OS' }
+    $vars += [pscustomobject]@{ Name='ADO_AREA_PATH'; Value='OS\Core\SPARC\SIX - Server, Intelligence, and Experiences\Enterprise Windows Admin Center' }
+  }
 }
 
 Write-Host ""

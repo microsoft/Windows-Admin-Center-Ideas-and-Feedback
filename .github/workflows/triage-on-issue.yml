@@ -7,9 +7,9 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # for Azure / Entra OIDC federation (ADO bearer token)
   # The repository-scoped GITHUB_TOKEN here is unused by the agent — it
-  # authenticates via the GitHub App token minted below. We still need to
-  # request minimum permissions for the runner.
+  # authenticates via the GitHub App token minted below.
 
 concurrency:
   group: triage-${{ github.event.issue.number }}
@@ -43,6 +43,34 @@ jobs:
           app-id: ${{ secrets.WAC_BOT_APP_ID }}
           private-key: ${{ secrets.WAC_BOT_APP_PRIVATE_KEY }}
 
+      # Federate to Microsoft Entra ID via GitHub Actions OIDC so we never
+      # store a long-lived ADO credential. Required because Microsoft tenant
+      # policy restricts PATs to packaging-scope-only (mid-2026 enforcement)
+      # and Global PATs are decommissioned on Dec 1, 2026.
+      - name: Sign in to Azure (Entra OIDC)
+        id: azlogin
+        if: ${{ vars.ADO_AUTH_MODE != 'pat' && vars.AZURE_CLIENT_ID != '' }}
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Mint Azure DevOps bearer token
+        id: ado_token
+        if: ${{ steps.azlogin.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 499b84ac-1321-427f-aa17-267ca6975798 is the static Azure DevOps
+          # resource id; this is the documented way to mint an ADO token.
+          token=$(az account get-access-token \
+                    --resource 499b84ac-1321-427f-aa17-267ca6975798 \
+                    --query accessToken -o tsv)
+          # Mask in logs and pass to subsequent steps without printing.
+          echo "::add-mask::$token"
+          echo "ADO_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
+
       - name: Run triage agent
         id: run
         working-directory: .github/copilot-triage
@@ -54,7 +82,13 @@ jobs:
           AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
           AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
           AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+          # ADO auth: prefer the OIDC-minted bearer token; fall back to PAT
+          # for non-Microsoft tenants where global PATs still work.
+          ADO_BEARER_TOKEN: ${{ env.ADO_BEARER_TOKEN }}
           ADO_PAT: ${{ secrets.ADO_PAT }}
+          ADO_ORG: ${{ vars.ADO_ORG }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
+          ADO_AREA_PATH: ${{ vars.ADO_AREA_PATH }}
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
           EMAIL_WEBHOOK_URL: ${{ secrets.EMAIL_WEBHOOK_URL }}
           TEAM_DL_ADDRESS: ${{ secrets.TEAM_DL_ADDRESS }}

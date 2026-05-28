@@ -56,7 +56,8 @@ def test_e2e_dry_run_with_mocked_llm(isolated_workdir, monkeypatch):
     # Make sure no real-world env leaks in
     for k in ("AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY",
               "AZURE_OPENAI_DEPLOYMENT", "GITHUB_TOKEN", "GITHUB_EVENT_PATH",
-              "ADO_PAT", "TEAMS_WEBHOOK_URL", "EMAIL_WEBHOOK_URL"):
+              "ADO_PAT", "ADO_BEARER_TOKEN",
+              "TEAMS_WEBHOOK_URL", "EMAIL_WEBHOOK_URL"):
         monkeypatch.delenv(k, raising=False)
 
     def fake_triage(issue, retriever, *, debug_sink=None):

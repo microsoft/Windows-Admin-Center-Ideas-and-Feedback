@@ -4,6 +4,16 @@ Used by:
   * agent.py             — creates Bug/Feature work items on first triage.
   * ado_sync.py          — polls state for existing linked work items.
   * digest.py            — counts work items filed in the last 7 days.
+
+Authentication:
+  The client accepts either of two credentials, picked in this order:
+    1. ADO_BEARER_TOKEN — a short-lived Microsoft Entra access token for the
+       Azure DevOps resource (app id 499b84ac-1321-427f-aa17-267ca6975798).
+       This is the recommended path: GitHub Actions mints it via OIDC
+       federation, so no long-lived secret is stored anywhere.
+    2. ADO_PAT — legacy basic-auth PAT. The Microsoft tenant restricts PATs
+       to packaging scope only as of mid-2026 so this path is preserved for
+       non-Microsoft tenants and for local dev only.
 """
 
 from __future__ import annotations
@@ -43,9 +53,13 @@ class WorkItemRef:
     type: str | None = None
 
 
-def _auth_header(pat: str) -> dict[str, str]:
+def _basic_auth_header(pat: str) -> dict[str, str]:
     encoded = base64.b64encode(f":{pat}".encode("utf-8")).decode("ascii")
     return {"Authorization": f"Basic {encoded}"}
+
+
+def _bearer_auth_header(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
 
 
 class AzureDevOpsClient:
@@ -53,6 +67,7 @@ class AzureDevOpsClient:
         self,
         *,
         pat: str | None = None,
+        bearer_token: str | None = None,
         organization: str | None = None,
         project: str | None = None,
         area_path: str | None = None,
@@ -60,19 +75,46 @@ class AzureDevOpsClient:
     ):
         # Allow ops to retarget org/project/area-path via repo variables
         # (ADO_ORG, ADO_PROJECT, ADO_AREA_PATH) without code changes.
-        self._pat = pat or os.environ["ADO_PAT"]
+        #
+        # Auth precedence: explicit kwarg > env-var bearer > env-var PAT.
+        # Bearer wins over PAT so that production (GitHub Actions OIDC) is
+        # picked when both are present (e.g. dev fallback PAT in .env).
+        self._bearer = (
+            bearer_token
+            if bearer_token is not None
+            else os.environ.get("ADO_BEARER_TOKEN")
+        )
+        self._pat = (
+            pat
+            if pat is not None
+            else os.environ.get("ADO_PAT")
+        )
+        if not self._bearer and not self._pat:
+            raise RuntimeError(
+                "ADO credentials not configured: set ADO_BEARER_TOKEN "
+                "(Entra OIDC, recommended) or ADO_PAT (legacy)."
+            )
         self._org = organization or os.environ.get("ADO_ORG") or DEFAULT_ORG
         self._project = project or os.environ.get("ADO_PROJECT") or DEFAULT_PROJECT
         self._area = area_path or os.environ.get("ADO_AREA_PATH") or DEFAULT_AREA_PATH
         self._s = session or requests.Session()
 
     @property
+    def auth_mode(self) -> str:
+        return "bearer" if self._bearer else "basic"
+
+    @property
     def base(self) -> str:
         return f"https://dev.azure.com/{self._org}/{self._project}"
 
     def _headers(self, content_type: str = "application/json") -> dict[str, str]:
+        auth = (
+            _bearer_auth_header(self._bearer)
+            if self._bearer
+            else _basic_auth_header(self._pat)
+        )
         return {
-            **_auth_header(self._pat),
+            **auth,
             "Accept": "application/json",
             "Content-Type": content_type,
             "User-Agent": "wac-feedback-bot",
