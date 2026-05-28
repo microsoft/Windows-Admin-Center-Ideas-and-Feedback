@@ -52,6 +52,12 @@ param(
   [string]$AppDisplayName = 'wac-feedback-bot',
   [string]$ProductionRepo = 'microsoft/Windows-Admin-Center-Ideas-and-Feedback',
   [string]$TestRepo       = 'trungtran-msft/wac-feedback-test',
+  # Required by Microsoft tenant policy — every app registration in the
+  # microsoft.onmicrosoft.com tenant must be tagged with the owning
+  # Service Tree entry id (GUID). Find yours at
+  # https://servicetree.msftcloudes.com/ (search "Windows Admin Center" or
+  # ask your team's service-tree owner).
+  [string]$ServiceManagementReference = '',
   [switch]$SkipFederatedCredentials,
   [switch]$WhatIfMode
 )
@@ -111,7 +117,43 @@ if ($existing -and $existing.Count -gt 0) {
   $app = $existing[0]
   Write-Host ("  Reusing existing app : appId={0}" -f $app.appId) -ForegroundColor Green
 } else {
-  $appJson = az ad app create --display-name $AppDisplayName --sign-in-audience AzureADMyOrg --output json
+  # Microsoft tenant requires a Service Management Reference GUID. Prompt
+  # if not provided on the command line.
+  if (-not $ServiceManagementReference) {
+    Write-Host ""
+    Write-Host "Microsoft tenant policy requires a Service Tree GUID for new" -ForegroundColor Yellow
+    Write-Host "Entra app registrations. To find yours:" -ForegroundColor Yellow
+    Write-Host "  1. Open https://servicetree.msftcloudes.com/"
+    Write-Host "  2. Search 'Windows Admin Center' (or your team's service)."
+    Write-Host "  3. Open the matching Service entry."
+    Write-Host "  4. Copy the 'Service Id' GUID near the top of the page."
+    Write-Host ""
+    Write-Host "If you don't have one yet:" -ForegroundColor Yellow
+    Write-Host "  Ask your WAC team's service-tree owner, OR create a placeholder"
+    Write-Host "  Service entry (your team's manager usually owns this), OR for a"
+    Write-Host "  quick test use any other Service Tree id you own (you can"
+    Write-Host "  reassign it later via az ad app update --service-management-reference)."
+    Write-Host ""
+    $tryOpen = Read-Host "Open Service Tree in browser now? [Y/n]"
+    if ($tryOpen -ne 'n' -and $tryOpen -ne 'N') {
+      try { Start-Process 'https://servicetree.msftcloudes.com/' } catch { }
+    }
+    $ServiceManagementReference = (Read-Host "Paste the Service Tree GUID").Trim()
+  }
+  if (-not ($ServiceManagementReference -match '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')) {
+    Write-Error "Invalid Service Tree GUID: '$ServiceManagementReference'. Expected format: 00000000-0000-0000-0000-000000000000"
+    exit 1
+  }
+  Write-Host ("  Creating app with Service Tree id: {0}" -f $ServiceManagementReference)
+  $appJson = az ad app create `
+              --display-name $AppDisplayName `
+              --sign-in-audience AzureADMyOrg `
+              --service-management-reference $ServiceManagementReference `
+              --output json
+  if ($LASTEXITCODE -ne 0 -or -not $appJson) {
+    Write-Error "az ad app create failed. Check the error above. Common causes: invalid Service Tree GUID, tenant policy blocks app registration for your account, or stale az session (try 'az logout' then 'az login --tenant 72f988bf-86f1-41af-91ab-2d7cd011db47')."
+    exit 1
+  }
   $app = $appJson | ConvertFrom-Json
   Write-Host ("  Created new app      : appId={0}" -f $app.appId) -ForegroundColor Green
 }
@@ -178,14 +220,15 @@ if (-not $SkipFederatedCredentials) {
 
 # -------- 5. Persist state --------
 $cfg = [ordered]@{
-  app_display_name = $AppDisplayName
-  app_id           = $appId
-  app_object_id    = $objectId
-  sp_object_id     = $spObjectId
-  tenant_id        = $tenantId
-  production_repo  = $ProductionRepo
-  test_repo        = $TestRepo
-  configured       = (Get-Date).ToUniversalTime().ToString('o')
+  app_display_name             = $AppDisplayName
+  app_id                       = $appId
+  app_object_id                = $objectId
+  sp_object_id                 = $spObjectId
+  tenant_id                    = $tenantId
+  service_management_reference = $ServiceManagementReference
+  production_repo              = $ProductionRepo
+  test_repo                    = $TestRepo
+  configured                   = (Get-Date).ToUniversalTime().ToString('o')
 }
 $cfg | ConvertTo-Json -Depth 6 | Set-Content -Path $StatePath -Encoding utf8
 attrib +H $StatePath 2>$null
