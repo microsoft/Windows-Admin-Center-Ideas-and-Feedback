@@ -1,0 +1,146 @@
+name: Triage on issue
+run-name: "Triage #${{ github.event.issue.number }}: ${{ github.event.issue.title }}"
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  id-token: write   # for Azure / Entra OIDC federation (ADO bearer token)
+  # The repository-scoped GITHUB_TOKEN here is unused by the agent — it
+  # authenticates via the GitHub App token minted below.
+
+concurrency:
+  group: triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    # Don't run on issues opened by bots (the agent's own safety guards repeat
+    # this check, but skipping here saves Azure OpenAI cost).
+    if: ${{ github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-triage') }}
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .github/copilot-triage/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r .github/copilot-triage/requirements.txt
+
+      - name: Mint GitHub App installation token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.WAC_BOT_APP_ID }}
+          private-key: ${{ secrets.WAC_BOT_APP_PRIVATE_KEY }}
+
+      # Federate to Microsoft Entra ID via GitHub Actions OIDC so we never
+      # store a long-lived ADO credential. Required because Microsoft tenant
+      # policy restricts PATs to packaging-scope-only (mid-2026 enforcement)
+      # and Global PATs are decommissioned on Dec 1, 2026.
+      #
+      # NOTE: continue-on-error is intentional. On non-microsoft GitHub orgs
+      # (e.g. personal accounts used for staging) the Microsoft tenant
+      # rejects the OIDC token with AADSTS7002381 because the runner-issued
+      # token doesn't carry the required `enterprise` claim. In that case
+      # we skip the bearer-token mint and the agent falls back to either
+      # ADO_PAT (if set) or silently skips ADO work-item creation. All
+      # other downstream steps (reply, labels, Teams, email) still run.
+      - name: Sign in to Azure (Entra OIDC)
+        id: azlogin
+        if: ${{ vars.ADO_AUTH_MODE != 'pat' && vars.AZURE_CLIENT_ID != '' }}
+        continue-on-error: true
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Mint Azure DevOps bearer token
+        id: ado_token
+        if: ${{ steps.azlogin.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # 499b84ac-1321-427f-aa17-267ca6975798 is the static Azure DevOps
+          # resource id; this is the documented way to mint an ADO token.
+          token=$(az account get-access-token \
+                    --resource 499b84ac-1321-427f-aa17-267ca6975798 \
+                    --query accessToken -o tsv)
+          # Mask in logs and pass to subsequent steps without printing.
+          echo "::add-mask::$token"
+          echo "ADO_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Note about skipped ADO auth
+        if: ${{ steps.azlogin.outcome == 'failure' || steps.azlogin.outcome == 'skipped' }}
+        shell: bash
+        run: |
+          echo "::notice title=ADO auth skipped::Entra OIDC sign-in did not succeed (outcome=${{ steps.azlogin.outcome }}). The agent will continue without ADO work-item creation. Reply, labels, Teams, and email still run."
+
+      - name: Run triage agent
+        id: run
+        working-directory: .github/copilot-triage
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+          # ADO auth: prefer the OIDC-minted bearer token; fall back to PAT
+          # for non-Microsoft tenants where global PATs still work.
+          ADO_BEARER_TOKEN: ${{ env.ADO_BEARER_TOKEN }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          ADO_ORG: ${{ vars.ADO_ORG }}
+          ADO_PROJECT: ${{ vars.ADO_PROJECT }}
+          ADO_AREA_PATH: ${{ vars.ADO_AREA_PATH }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          EMAIL_WEBHOOK_URL: ${{ secrets.EMAIL_WEBHOOK_URL }}
+          TEAM_DL_ADDRESS: ${{ secrets.TEAM_DL_ADDRESS }}
+          # Mode controls live vs shadow vs gated vs off. Set the repository
+          # variable WAC_TRIAGE_MODE in Settings -> Variables -> Actions to override.
+          #   live   (default) — normal operation
+          #   shadow — call LLM, write debug artifact, but no comments / ADO / notify
+          #   gated  — only triage issues with the 'triage-test' label
+          #   off    — kill switch: skip everything (silences the bot without
+          #            disabling the workflow)
+          WAC_TRIAGE_MODE: ${{ vars.WAC_TRIAGE_MODE || 'live' }}
+        run: python agent.py
+
+      - name: Upload triage debug artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: triage-debug-${{ github.event.issue.number }}
+          path: .github/copilot-triage/triage-debug.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Flag failure on the issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          set -e
+          gh issue edit "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-label "triage-failed" || true
+          # Best-effort Teams alert (non-fatal)
+          if [ -n "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+            payload=$(cat <<JSON
+          {"text": ":warning: WAC triage failed on issue #${{ github.event.issue.number }} — ${{ github.event.issue.html_url }}"}
+          JSON
+            )
+            curl -s -X POST -H 'Content-Type: application/json' \
+              -d "$payload" "${{ secrets.TEAMS_WEBHOOK_URL }}" || true
+          fi

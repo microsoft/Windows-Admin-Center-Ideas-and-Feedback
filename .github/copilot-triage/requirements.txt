@@ -1,0 +1,8 @@
+openai>=1.50.0
+azure-identity>=1.17.0
+requests>=2.32.0
+PyYAML>=6.0.1
+Jinja2>=3.1.4
+PyJWT>=2.9.0
+cryptography>=43.0.0
+pytest>=8.3.0

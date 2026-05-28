@@ -1,0 +1,46 @@
+{
+  "type": "message",
+  "attachments": [
+    {
+      "contentType": "application/vnd.microsoft.card.adaptive",
+      "contentUrl": null,
+      "content": {
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "type": "AdaptiveCard",
+        "version": "1.4",
+        "body": [
+          {
+            "type": "TextBlock",
+            "text": "WAC feedback weekly digest — {{ period_label }}",
+            "weight": "Bolder",
+            "size": "Medium",
+            "wrap": true
+          },
+          {
+            "type": "FactSet",
+            "facts": [
+              { "title": "Issues triaged",   "value": "{{ stats.total }}" },
+              { "title": "Bugs",             "value": "{{ stats.bugs }}" },
+              { "title": "Features",         "value": "{{ stats.features }}" },
+              { "title": "Critical/High",    "value": "{{ stats.high_or_critical }}" },
+              { "title": "ADO items filed",  "value": "{{ stats.ado_filed }}" },
+              { "title": "ADO resolved",     "value": "{{ stats.ado_resolved }}" }
+            ]
+          }{% if recent_issues %},
+          {
+            "type": "TextBlock",
+            "text": "Recent issues",
+            "weight": "Bolder",
+            "spacing": "Medium",
+            "wrap": true
+          }{% for it in recent_issues %},
+          {
+            "type": "TextBlock",
+            "text": "[#{{ it.number }}]({{ it.url }}) — {{ it.title }}",
+            "wrap": true
+          }{% endfor %}{% endif %}
+        ]
+      }
+    }
+  ]
+}

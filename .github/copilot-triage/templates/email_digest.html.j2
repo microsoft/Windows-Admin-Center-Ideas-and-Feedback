@@ -1,0 +1,36 @@
+<!doctype html>
+<html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1f2328;">
+  <h2 style="margin-bottom:4px;">WAC feedback — weekly digest</h2>
+  <p style="margin-top:0;color:#57606a;">{{ period_label }}</p>
+
+  <h3>Summary</h3>
+  <table cellpadding="6" style="border-collapse:collapse;border:1px solid #d0d7de;">
+    <tr><td><b>Issues triaged</b></td><td>{{ stats.total }}</td></tr>
+    <tr><td><b>Bugs</b></td><td>{{ stats.bugs }}</td></tr>
+    <tr><td><b>Features</b></td><td>{{ stats.features }}</td></tr>
+    <tr><td><b>Critical/High severity</b></td><td>{{ stats.high_or_critical }}</td></tr>
+    <tr><td><b>ADO items filed</b></td><td>{{ stats.ado_filed }}</td></tr>
+    <tr><td><b>ADO items resolved/closed</b></td><td>{{ stats.ado_resolved }}</td></tr>
+  </table>
+
+  {% if recent_issues %}
+  <h3>Recent issues</h3>
+  <ul>
+    {% for it in recent_issues %}
+    <li>
+      <a href="{{ it.url }}">#{{ it.number }}</a> — {{ it.title }}
+      <span style="color:#57606a;">({{ it.category }} / {{ it.severity }})</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if ado_items %}
+  <h3>ADO items</h3>
+  <ul>
+    {% for w in ado_items %}
+    <li><a href="{{ w.url }}">#{{ w.id }}</a> ({{ w.type }} — {{ w.state }}) — {{ w.title }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</body></html>

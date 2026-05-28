@@ -348,3 +348,28 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# === WAC feedback triage bot additions ===
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local artifacts produced by the workflows when run locally
+.github/copilot-triage/triage-debug.json
+.github/copilot-triage/ado-sync-debug.json
+.github/copilot-triage/digest-debug.json
+
+# Output from scripts/create_github_app.py — NEVER commit private keys.
+.github/copilot-triage/scripts/out/
+*.pem
+
+# Provisioning workspace — contains real secrets (GitHub App PEM, AOAI key,
+# ADO PAT, Teams webhook URL). Each state/*.json file is treated as a secret.
+provisioning/state/*
+!provisioning/state/.gitignore
+
+
+# Local-demo runtime artifacts (PIDs, logs, per-issue state cache)
+local/state/
+

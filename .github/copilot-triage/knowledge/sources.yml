@@ -1,0 +1,43 @@
+# Knowledge sources consumed by the retriever.
+#
+# Each source has a `type` and a connector-specific config. Add or remove entries to
+# control what context the agent receives when triaging an issue.
+#
+# Supported types (implement under clients/ or knowledge/connectors/):
+#   - sharepoint           Microsoft Graph access to a SharePoint document library
+#   - github_repo          Private GitHub repo with markdown docs (uses the bot token)
+#   - ado_wiki             Azure DevOps Wiki under microsoft/OS
+#   - azure_ai_search      An Azure AI Search index that already contains docs
+#
+# Leaving this file empty (or with all sources disabled) yields the NoOpRetriever:
+# the agent sees only the issue itself.
+
+defaults:
+  max_chunks: 6
+  max_chars_per_chunk: 1200
+
+sources: []
+  # Example entries (uncomment + fill in once the team decides on sources):
+  #
+  # - name: wac-internal-troubleshooting-wiki
+  #   type: ado_wiki
+  #   enabled: false
+  #   organization: microsoft
+  #   project: OS
+  #   wiki_identifier: WAC.wiki
+  #   path_prefix: /Triage
+  #
+  # - name: wac-docs-private
+  #   type: github_repo
+  #   enabled: false
+  #   owner: microsoft
+  #   repo: wac-internal-docs
+  #   ref: main
+  #   include_globs: ["docs/**/*.md", "playbooks/**/*.md"]
+  #
+  # - name: wac-search
+  #   type: azure_ai_search
+  #   enabled: false
+  #   endpoint: https://wac-search.search.windows.net
+  #   index: wac-triage
+  #   api_version: 2024-07-01
