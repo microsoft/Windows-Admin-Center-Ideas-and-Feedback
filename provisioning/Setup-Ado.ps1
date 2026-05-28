@@ -79,7 +79,7 @@ try {
   exit 2
 }
 
-# 2. Validate work-item types Bug + Feature exist
+# 2. Validate work-item types Bug + Feature exist (REQUIRED — needs vso.work scope)
 $witUrl = "https://dev.azure.com/$Organization/$Project/_apis/wit/workitemtypes?api-version=7.0"
 try {
   $wits = Invoke-RestMethod -Uri $witUrl -Headers $headers -Method Get -TimeoutSec 30
@@ -91,7 +91,26 @@ try {
     Write-Host "  Bug and Feature work item types confirmed." -ForegroundColor Green
   }
 } catch {
-  Write-Warning "Couldn't read work-item types: $($_.Exception.Message)"
+  $code = $null
+  if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode }
+  if ($code -eq 401 -or $code -eq 403) {
+    Write-Error @"
+PAT is missing the 'Work Items (Read, write, & manage)' scope.
+
+The token read the project but cannot read work items (HTTP $code on
+$witUrl).
+
+Fix: go to https://dev.azure.com/$Organization/_usersSettings/tokens,
+revoke this token, create a new one and CHECK the box:
+   Scopes -> Show all scopes -> Work Items -> Read, write, & manage
+
+Then re-run this script.
+"@
+    exit 3
+  } else {
+    Write-Error "Couldn't read work-item types: $($_.Exception.Message)"
+    exit 4
+  }
 }
 
 # 3. Validate area path resolves
