@@ -1,0 +1,52 @@
+{
+  "started_at": "2026-05-28T03:26:58.451274+00:00",
+  "repo": "microsoft/Windows-Admin-Center-Ideas-and-Feedback",
+  "dry_run": false,
+  "mode": "shadow",
+  "use_mock_llm": true,
+  "issue_number": 999001,
+  "issue_url": "https://github.com/microsoft/Windows-Admin-Center-Ideas-and-Feedback/issues/999001",
+  "triage": {
+    "category": "bug",
+    "mode": "aMode",
+    "severity": "high",
+    "labels": [
+      "triaged",
+      "bug",
+      "aMode",
+      "severity:high",
+      "gateway",
+      "installer"
+    ],
+    "summary": "Bug report \u2014 **Environment:** - WAC Version: 2.6.28.7 - Deployment type: Gateway mode on dedicated server - Gateway OS: Windows Server 2022 Core **Description:** The WAC gateway installer fails halfway through with a generic 'unexpected error' dialog when the target server is running with SCO\u2026",
+    "missing_info": [
+      "Could you share any additional repro steps or screenshots?"
+    ],
+    "ado_title": "[GH #999001] [BUG] Gateway install crashes when target server has SCONFIG enabled",
+    "ado_description_html": "<p><strong>Source:</strong> <a href=\"https://github.com/microsoft/Windows-Admin-Center-Ideas-and-Feedback/issues/999001\">GitHub #999001</a></p><p><strong>Reported by:</strong> @fictional-customer</p><p><strong>Summary:</strong> Bug report \u2014 **Environment:** - WAC Version: 2.6.28.7 - Deployment type: Gateway mode on dedicated server - Gateway OS: Windows Server 2022 Core **Description:** The WAC gateway installer fails halfway through with a generic 'unexpected error' dialog when the target server is running with SCO\u2026</p><hr><pre>**Environment:**\n- WAC Version: 2.6.28.7\n- Deployment type: Gateway mode on dedicated server\n- Gateway OS: Windows Server 2022 Core\n\n**Description:**\nThe WAC gateway installer fails halfway through with a generic 'unexpected error' dialog when the target server is running with SCONFIG enabled. We saw this on two separate hosts.\n\n**Steps to reproduce:**\n1. Provision a fresh Windows Server 2022 Server Core VM.\n2. Run the WAC gateway installer (WindowsAdminCenter2410.msi).\n3. Crash at the 'Configure HTTPS' step.\n\n**Expected:**\nInstaller completes successfully.\n\n**Workaround attempted:**\nNone.</pre>",
+    "ado_tags": [
+      "gateway",
+      "installer"
+    ]
+  },
+  "model": "mock-heuristic-v1",
+  "prompt": {
+    "system": "<mock>",
+    "user": "<mock>"
+  },
+  "raw_response": "<mock>",
+  "grounding_chunks": [],
+  "reply_markdown": "Hi @fictional-customer \u2014 thanks for taking the time to file this, and apologies for the trouble.\n\n**What we understood:** Bug report \u2014 **Environment:** - WAC Version: 2.6.28.7 - Deployment type: Gateway mode on dedicated server - Gateway OS: Windows Server 2022 Core **Description:** The WAC gateway installer fails halfway through with a generic 'unexpected error' dialog when the target server is running with SCO\u2026\n\nTo help us reproduce and prioritize, could you confirm a few details?\n\n- Could you share any additional repro steps or screenshots?\n\n\nWe're tracking this internally as **[ADO #0](https://dev.azure.com/microsoft/OS/_workitems/edit/0)**. We'll post back on this issue when there's news.\n\n\u2014 The Windows Admin Center team\n\n<!-- triaged-by: wac-feedback-bot -->\n<!-- ado-id: 0 -->\n<!-- triage-version: 1 -->\n",
+  "labels_to_apply": [
+    "aMode",
+    "bug",
+    "gateway",
+    "installer",
+    "severity:high",
+    "triaged"
+  ],
+  "notify": "skipped (shadow)",
+  "status": "ok",
+  "finished_at": "2026-05-28T03:26:58.451274+00:00",
+  "elapsed_seconds": 0.0
+}

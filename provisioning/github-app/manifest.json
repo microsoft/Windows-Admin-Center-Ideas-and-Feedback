@@ -1,0 +1,23 @@
+{
+  "name": "wac-feedback-bot",
+  "description": "Triages WAC Ideas-and-Feedback GitHub issues: classifies, labels, drafts customer replies, files ADO work items, and notifies the team.",
+  "url": "https://github.com/microsoft/Windows-Admin-Center-Ideas-and-Feedback",
+  "hook_attributes": {
+    "url": "https://example.invalid/wac-feedback-bot-uses-actions-not-webhooks",
+    "active": false
+  },
+  "redirect_url": "http://localhost:54017/callback",
+  "callback_urls": [
+    "http://localhost:54017/callback"
+  ],
+  "public": false,
+  "request_oauth_on_install": false,
+  "setup_on_update": false,
+  "default_permissions": {
+    "issues": "write",
+    "metadata": "read"
+  },
+  "default_events": [
+    "issues"
+  ]
+}

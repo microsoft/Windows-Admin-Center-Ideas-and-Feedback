@@ -1,0 +1,95 @@
+name: Triage on issue
+run-name: "Triage #${{ github.event.issue.number }}: ${{ github.event.issue.title }}"
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  # The repository-scoped GITHUB_TOKEN here is unused by the agent — it
+  # authenticates via the GitHub App token minted below. We still need to
+  # request minimum permissions for the runner.
+
+concurrency:
+  group: triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    # Don't run on issues opened by bots (the agent's own safety guards repeat
+    # this check, but skipping here saves Azure OpenAI cost).
+    if: ${{ github.event.issue.user.type != 'Bot' && !contains(github.event.issue.labels.*.name, 'no-triage') }}
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .github/copilot-triage/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r .github/copilot-triage/requirements.txt
+
+      - name: Mint GitHub App installation token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.WAC_BOT_APP_ID }}
+          private-key: ${{ secrets.WAC_BOT_APP_PRIVATE_KEY }}
+
+      - name: Run triage agent
+        id: run
+        working-directory: .github/copilot-triage
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_OPENAI_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_DEPLOYMENT }}
+          AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          EMAIL_WEBHOOK_URL: ${{ secrets.EMAIL_WEBHOOK_URL }}
+          TEAM_DL_ADDRESS: ${{ secrets.TEAM_DL_ADDRESS }}
+          # Mode controls live vs shadow vs gated. Set the repository variable
+          # WAC_TRIAGE_MODE in Settings -> Variables -> Actions to override.
+          #   live   (default) — normal operation
+          #   shadow — call LLM, write debug artifact, but no comments / ADO / notify
+          #   gated  — only triage issues with the 'triage-test' label
+          WAC_TRIAGE_MODE: ${{ vars.WAC_TRIAGE_MODE || 'live' }}
+        run: python agent.py
+
+      - name: Upload triage debug artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: triage-debug-${{ github.event.issue.number }}
+          path: .github/copilot-triage/triage-debug.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Flag failure on the issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+        run: |
+          set -e
+          gh issue edit "${{ github.event.issue.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-label "triage-failed" || true
+          # Best-effort Teams alert (non-fatal)
+          if [ -n "${{ secrets.TEAMS_WEBHOOK_URL }}" ]; then
+            payload=$(cat <<JSON
+          {"text": ":warning: WAC triage failed on issue #${{ github.event.issue.number }} — ${{ github.event.issue.html_url }}"}
+          JSON
+            )
+            curl -s -X POST -H 'Content-Type: application/json' \
+              -d "$payload" "${{ secrets.TEAMS_WEBHOOK_URL }}" || true
+          fi

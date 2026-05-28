@@ -1,0 +1,25 @@
+{% set verb = {
+  "Active":   "is now being worked on",
+  "Committed":"is now committed for an upcoming milestone",
+  "Resolved": "has been resolved internally",
+  "Closed":   "has been closed",
+  "Removed":  "was removed from our backlog",
+  "Cut":      "was cut from the current scope"
+} %}
+Hi @{{ author }} — quick update on this one.
+
+Our internal tracker for this issue {{ verb.get(new_state, "moved to **" ~ new_state ~ "**") }}.
+
+{% if new_state in ["Resolved", "Closed"] -%}
+If you're able to verify the fix on a recent Windows Admin Center build, please let us know
+whether it works for you. If you still see the issue, comment here and we'll re-open the
+investigation.
+{%- elif new_state in ["Active", "Committed"] -%}
+We'll post another update when there's more to share.
+{%- else -%}
+We wanted to keep you in the loop.
+{%- endif %}
+
+— The Windows Admin Center team
+
+<!-- ado-state-update: {{ new_state }} from {{ previous_state or "unknown" }} -->

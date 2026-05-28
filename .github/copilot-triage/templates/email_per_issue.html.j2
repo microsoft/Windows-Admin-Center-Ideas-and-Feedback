@@ -1,0 +1,28 @@
+<!doctype html>
+<html><body style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1f2328;">
+  <h2 style="margin-bottom:4px;">New WAC feedback triaged</h2>
+  <p style="margin-top:0;color:#57606a;">
+    <a href="{{ issue.html_url }}">#{{ issue.number }}</a> by @{{ issue.user.login }}
+  </p>
+  <h3 style="margin-bottom:4px;">{{ issue.title }}</h3>
+  <table cellpadding="6" style="border-collapse:collapse;border:1px solid #d0d7de;">
+    <tr><td><b>Category</b></td><td>{{ triage.category }}</td></tr>
+    <tr><td><b>Mode</b></td><td>{{ triage.mode }}</td></tr>
+    <tr><td><b>Severity</b></td><td>{{ triage.severity }}</td></tr>
+    <tr><td><b>Labels</b></td><td>{{ triage.labels | join(", ") }}</td></tr>
+    <tr><td><b>ADO</b></td><td><a href="{{ ado_url }}">#{{ ado_id }}</a></td></tr>
+  </table>
+  <h4>Summary</h4>
+  <p>{{ triage.summary }}</p>
+  {% if triage.missing_info %}
+  <h4>Asked customer for</h4>
+  <ul>
+    {% for item in triage.missing_info %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  <hr>
+  <p style="color:#57606a;font-size:12px;">
+    Auto-triaged by <code>wac-feedback-bot</code>. Reply or label
+    <code>no-triage</code> to opt this issue out of future automation.
+  </p>
+</body></html>

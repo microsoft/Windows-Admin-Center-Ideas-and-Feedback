@@ -1,0 +1,75 @@
+name: Weekly triage digest
+
+on:
+  schedule:
+    # Mondays 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Days of history to include in the digest."
+        required: false
+        default: "7"
+      dry_run:
+        description: "Print to logs but don't send."
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-digest
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .github/copilot-triage/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r .github/copilot-triage/requirements.txt
+
+      - name: Mint GitHub App installation token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.WAC_BOT_APP_ID }}
+          private-key: ${{ secrets.WAC_BOT_APP_PRIVATE_KEY }}
+
+      - name: Build and send digest
+        working-directory: .github/copilot-triage
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ADO_PAT: ${{ secrets.ADO_PAT }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          EMAIL_WEBHOOK_URL: ${{ secrets.EMAIL_WEBHOOK_URL }}
+          TEAM_DL_ADDRESS: ${{ secrets.TEAM_DL_ADDRESS }}
+        run: |
+          DAYS="${{ github.event.inputs.days }}"
+          DAYS="${DAYS:-7}"
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python digest.py --days "$DAYS" --dry-run
+          else
+            python digest.py --days "$DAYS"
+          fi
+
+      - name: Upload digest debug artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-debug-${{ github.run_id }}
+          path: .github/copilot-triage/digest-debug.json
+          if-no-files-found: ignore
+          retention-days: 30

@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; color: #24292f; line-height: 1.45; }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px;
+            background: #ddf4ff; color: #0969da; margin-right: 4px; }
+    .pill.bug      { background: #ffebe9; color: #cf222e; }
+    .pill.feature  { background: #dafbe1; color: #1a7f37; }
+    .pill.high     { background: #ffebe9; color: #cf222e; }
+    .pill.medium   { background: #fff8c5; color: #9a6700; }
+    .pill.low      { background: #d2dff7; color: #0550ae; }
+    .card { border: 1px solid #d0d7de; border-radius: 6px; padding: 14px 18px; margin: 12px 0;
+            background: #f6f8fa; }
+    .reply { background: #ffffff; border: 1px solid #d0d7de; border-radius: 6px;
+             padding: 14px 18px; }
+    .reply pre { background: transparent; white-space: pre-wrap; word-wrap: break-word; }
+    h1 { font-size: 18px; margin-bottom: 4px; }
+    h2 { font-size: 14px; margin-top: 18px; margin-bottom: 6px; color: #57606a;
+         text-transform: uppercase; letter-spacing: 0.5px; }
+    code { background: #eaeef2; padding: 1px 4px; border-radius: 3px; }
+    .meta { color: #57606a; font-size: 13px; }
+    .footer { color: #57606a; font-size: 11px; margin-top: 24px; border-top: 1px solid #d0d7de;
+              padding-top: 8px; }
+    a { color: #0969da; text-decoration: none; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>
+    <a href="https://github.com/microsoft/Windows-Admin-Center-Ideas-and-Feedback/issues/999001">#999001 — [BUG] Gateway install crashes when target server has SCONFIG enabled</a>
+  </h1>
+  <div class="meta">
+    Filed by <strong>@fictional-customer</strong>
+    on  &middot; <a href="https://github.com/microsoft/Windows-Admin-Center-Ideas-and-Feedback/issues/999001">open in GitHub</a>
+  </div>
+
+  <div class="card">
+    <span class="pill bug">BUG</span>
+    <span class="pill high">severity: high</span>
+    <span class="pill">aMode</span>
+    
+      <span class="pill">bug</span>
+    
+      <span class="pill">aMode</span>
+    
+      <span class="pill">severity:high</span>
+    
+      <span class="pill">gateway</span>
+    
+      <span class="pill">installer</span>
+    
+    <p style="margin-top:10px"><strong>Summary:</strong> Bug report — **Environment:** - WAC Version: 2.6.28.7 - Deployment type: Gateway mode on dedicated server - Gateway OS: Windows Server 2022 Core **Description:** The WAC gateway installer fails halfway through with a generic &#39;unexpected error&#39; dialog when the target server is running with SCO…</p>
+    <p style="margin:0"><strong>Would file ADO as:</strong> <code>[GH #999001] [BUG] Gateway install crashes when target server has SCONFIG enabled</code></p>
+  </div>
+
+  <h2>Drafted customer reply</h2>
+  <div class="reply">
+    <pre>Hi @fictional-customer — thanks for taking the time to file this, and apologies for the trouble.
+
+**What we understood:** Bug report — **Environment:** - WAC Version: 2.6.28.7 - Deployment type: Gateway mode on dedicated server - Gateway OS: Windows Server 2022 Core **Description:** The WAC gateway installer fails halfway through with a generic &#39;unexpected error&#39; dialog when the target server is running with SCO…
+
+To help us reproduce and prioritize, could you confirm a few details?
+
+- Could you share any additional repro steps or screenshots?
+
+
+We&#39;re tracking this internally as **[ADO #0](https://dev.azure.com/microsoft/OS/_workitems/edit/0)**. We&#39;ll post back on this issue when there&#39;s news.
+
+— The Windows Admin Center team
+
+&lt;!-- triaged-by: wac-feedback-bot --&gt;
+&lt;!-- ado-id: 0 --&gt;
+&lt;!-- triage-version: 1 --&gt;
+</pre>
+  </div>
+
+  <h2>Original issue body (truncated)</h2>
+  <div class="card">
+    <pre>**Environment:**
+- WAC Version: 2.6.28.7
+- Deployment type: Gateway mode on dedicated server
+- Gateway OS: Windows Server 2022 Core
+
+**Description:**
+The WAC gateway installer fails halfway through with a generic &#39;unexpected error&#39; dialog when the target server is running with SCONFIG enabled. We saw this on two separate hosts.
+
+**Steps to reproduce:**
+1. Provision a fresh Windows Server 2022 Server Core VM.
+2. Run the WAC gateway installer (WindowsAdminCenter2410.msi).
+3. Crash at the &#39;Configure HTTPS&#39; step.
+
+**Expected:**
+Installer completes successfully.
+
+**Workaround attempted:**
+None.</pre>
+  </div>
+
+  <h2>Run details</h2>
+  <ul>
+    <li>Mode: <code>shadow</code>
+        (mock LLM)</li>
+    <li>Dry-run: <code>False</code> — no comments, ADO items, or notifications were posted</li>
+    <li>Runner: <code>theo-pc</code></li>
+    <li>Started: 2026-05-28T03:16:32.958044+00:00</li>
+    <li>Elapsed: 0.05s</li>
+    
+  </ul>
+
+  <div class="footer">
+    Generated by the WAC Feedback Triage local demo runner.
+    This is a <em>dry-run</em>: nothing was posted to the customer or to ADO.
+    To execute against the live pipeline, see <code>.github/copilot-triage/RUNBOOK.md</code>.
+  </div>
+</div>
+</body>
+</html>

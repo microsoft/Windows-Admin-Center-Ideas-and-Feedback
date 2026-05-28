@@ -1,0 +1,2 @@
+# Local demo runner deps (Windows-only — uses Outlook COM via pywin32)
+pywin32>=306

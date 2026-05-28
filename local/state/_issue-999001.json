@@ -1,0 +1,15 @@
+{
+  "number": 999001,
+  "title": "[BUG] Gateway install crashes when target server has SCONFIG enabled",
+  "html_url": "https://github.com/microsoft/Windows-Admin-Center-Ideas-and-Feedback/issues/999001",
+  "user": {
+    "login": "fictional-customer",
+    "type": "User"
+  },
+  "labels": [
+    {
+      "name": "aMode"
+    }
+  ],
+  "body": "**Environment:**\n- WAC Version: 2.6.28.7\n- Deployment type: Gateway mode on dedicated server\n- Gateway OS: Windows Server 2022 Core\n\n**Description:**\nThe WAC gateway installer fails halfway through with a generic 'unexpected error' dialog when the target server is running with SCONFIG enabled. We saw this on two separate hosts.\n\n**Steps to reproduce:**\n1. Provision a fresh Windows Server 2022 Server Core VM.\n2. Run the WAC gateway installer (WindowsAdminCenter2410.msi).\n3. Crash at the 'Configure HTTPS' step.\n\n**Expected:**\nInstaller completes successfully.\n\n**Workaround attempted:**\nNone."
+}
