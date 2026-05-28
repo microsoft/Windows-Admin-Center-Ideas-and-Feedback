@@ -47,9 +47,18 @@ jobs:
       # store a long-lived ADO credential. Required because Microsoft tenant
       # policy restricts PATs to packaging-scope-only (mid-2026 enforcement)
       # and Global PATs are decommissioned on Dec 1, 2026.
+      #
+      # NOTE: continue-on-error is intentional. On non-microsoft GitHub orgs
+      # (e.g. personal accounts used for staging) the Microsoft tenant
+      # rejects the OIDC token with AADSTS7002381 because the runner-issued
+      # token doesn't carry the required `enterprise` claim. In that case
+      # we skip the bearer-token mint and the agent falls back to either
+      # ADO_PAT (if set) or silently skips ADO work-item creation. All
+      # other downstream steps (reply, labels, Teams, email) still run.
       - name: Sign in to Azure (Entra OIDC)
         id: azlogin
         if: ${{ vars.ADO_AUTH_MODE != 'pat' && vars.AZURE_CLIENT_ID != '' }}
+        continue-on-error: true
         uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
@@ -70,6 +79,12 @@ jobs:
           # Mask in logs and pass to subsequent steps without printing.
           echo "::add-mask::$token"
           echo "ADO_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Note about skipped ADO auth
+        if: ${{ steps.azlogin.outcome == 'failure' || steps.azlogin.outcome == 'skipped' }}
+        shell: bash
+        run: |
+          echo "::notice title=ADO auth skipped::Entra OIDC sign-in did not succeed (outcome=${{ steps.azlogin.outcome }}). The agent will continue without ADO work-item creation. Reply, labels, Teams, and email still run."
 
       - name: Run triage agent
         id: run
