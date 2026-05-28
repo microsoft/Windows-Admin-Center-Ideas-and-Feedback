@@ -369,3 +369,7 @@ __pycache__/
 provisioning/state/*
 !provisioning/state/.gitignore
 
+
+# Local-demo runtime artifacts (PIDs, logs, per-issue state cache)
+local/state/
+
