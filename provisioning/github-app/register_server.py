@@ -53,29 +53,47 @@ def _render_index(manifest: dict) -> bytes:
     html = f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>Register wac-feedback-bot</title>
 <style>
-  body {{ font-family: -apple-system, Segoe UI, sans-serif; max-width: 640px;
-          margin: 4em auto; padding: 0 1em; color: #24292f; }}
-  h1   {{ font-size: 1.5em; }}
+  body {{ font-family: -apple-system, Segoe UI, sans-serif; max-width: 720px;
+          margin: 3em auto; padding: 0 1em; color: #24292f; line-height: 1.5; }}
+  h1   {{ font-size: 1.6em; }}
   pre  {{ background: #f6f8fa; padding: 1em; border-radius: 6px;
           overflow-x: auto; font-size: 0.85em; }}
-  button {{ background: #1f883d; color: white; border: 0; padding: 0.6em 1.2em;
-            border-radius: 6px; font-size: 1em; cursor: pointer; }}
+  .big-btn {{ display: block; background: #1f883d; color: white; border: 0;
+              padding: 1em 1.5em; border-radius: 8px; font-size: 1.15em;
+              cursor: pointer; width: 100%; margin: 1em 0; font-weight: 600; }}
+  .big-btn:hover {{ background: #1a7f37; }}
+  .steps {{ background: #fff8c5; border: 1px solid #d4a72c; border-radius: 6px;
+            padding: 1em 1.5em; margin: 1em 0; }}
+  ol li {{ margin: 0.4em 0; }}
 </style></head><body>
-<h1>Register the <code>wac-feedback-bot</code> GitHub App</h1>
-<p>Clicking the button below sends this manifest to GitHub. You'll see the
-   standard GitHub <em>Create GitHub App</em> confirmation page where you can
-   review and click <strong>Create GitHub App</strong>.</p>
+<h1>Step 1 of 4: Register the <code>wac-feedback-bot</code> GitHub App</h1>
+
+<div class="steps">
+  <strong>What's about to happen:</strong>
+  <ol>
+    <li>You click the green button below.</li>
+    <li>GitHub opens a confirmation page showing the app name and permissions.</li>
+    <li>You click <strong>Create GitHub App</strong> on that GitHub page.</li>
+    <li>GitHub redirects you back here. We write the credentials to a local file
+        and you're done with step 1.</li>
+  </ol>
+</div>
+
 <form action="https://github.com/settings/apps/new?state={STATE_TOKEN}"
       method="post">
   <input type="hidden" name="manifest" value='{manifest_json.replace("'", "&apos;")}'/>
-  <button type="submit">Send manifest to GitHub</button>
+  <button type="submit" class="big-btn">
+    Send manifest to GitHub &rarr;
+  </button>
 </form>
-<details style="margin-top:2em"><summary>Manifest being sent</summary>
-<pre>{json.dumps(manifest, indent=2)}</pre></details>
-<script>
-  // Auto-submit after 800ms so the typical flow is one-click.
-  setTimeout(() => document.querySelector('form').submit(), 800);
-</script>
+
+<details><summary>What's in the manifest being sent?</summary>
+<pre>{json.dumps(manifest, indent=2)}</pre>
+</details>
+
+<p style="color:#656d76;font-size:0.9em;margin-top:2em">
+  Server is listening on <code>localhost:{PORT}</code>. Close this tab to cancel.
+</p>
 </body></html>
 """
     return html.encode("utf-8")

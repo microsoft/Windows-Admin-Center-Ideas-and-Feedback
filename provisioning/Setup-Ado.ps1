@@ -96,7 +96,8 @@ try {
 
 # 3. Validate area path resolves
 $areaSegments = $AreaPath -split '\\'
-$areaTail = $areaSegments[1..($areaSegments.Count - 1)] -join '/'
+$areaTail = ($areaSegments[1..($areaSegments.Count - 1)] |
+              ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
 $areaUrl = "https://dev.azure.com/$Organization/$Project/_apis/wit/classificationnodes/Areas/$areaTail`?api-version=7.0"
 try {
   $area = Invoke-RestMethod -Uri $areaUrl -Headers $headers -Method Get -TimeoutSec 30
