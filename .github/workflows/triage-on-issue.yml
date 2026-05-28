@@ -58,11 +58,13 @@ jobs:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
           EMAIL_WEBHOOK_URL: ${{ secrets.EMAIL_WEBHOOK_URL }}
           TEAM_DL_ADDRESS: ${{ secrets.TEAM_DL_ADDRESS }}
-          # Mode controls live vs shadow vs gated. Set the repository variable
-          # WAC_TRIAGE_MODE in Settings -> Variables -> Actions to override.
+          # Mode controls live vs shadow vs gated vs off. Set the repository
+          # variable WAC_TRIAGE_MODE in Settings -> Variables -> Actions to override.
           #   live   (default) — normal operation
           #   shadow — call LLM, write debug artifact, but no comments / ADO / notify
           #   gated  — only triage issues with the 'triage-test' label
+          #   off    — kill switch: skip everything (silences the bot without
+          #            disabling the workflow)
           WAC_TRIAGE_MODE: ${{ vars.WAC_TRIAGE_MODE || 'live' }}
         run: python agent.py
 

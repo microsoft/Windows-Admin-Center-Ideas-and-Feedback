@@ -150,13 +150,16 @@ def main(argv: list[str] | None = None) -> int:
                     help="Skip all writes (GitHub, ADO, Teams, email).")
     ap.add_argument(
         "--mode",
-        choices=["live", "shadow", "gated"],
+        choices=["live", "shadow", "gated", "off"],
         default=os.environ.get("WAC_TRIAGE_MODE", "live"),
         help=(
             "live   = normal operation; "
             "shadow = call LLM + write debug artifact but no comments / ADO / notify; "
             "gated  = only run if the issue has the 'triage-test' label "
-            "(safe pre-launch test)."
+            "(safe pre-launch test); "
+            "off    = exit immediately, do nothing (kill switch — set the "
+            "WAC_TRIAGE_MODE repo variable to 'off' to silence the bot "
+            "without disabling the workflow)."
         ),
     )
     ap.add_argument(
@@ -187,6 +190,13 @@ def main(argv: list[str] | None = None) -> int:
         issue = _load_issue_payload(args.issue)
         debug["issue_number"] = issue.get("number")
         debug["issue_url"] = issue.get("html_url")
+
+        # 'off' is the kill switch: skip everything, no AOAI cost.
+        if args.mode == "off":
+            log.info("Skipping #%s: WAC_TRIAGE_MODE=off (bot is paused)",
+                     issue.get("number"))
+            debug["skipped"] = "WAC_TRIAGE_MODE=off"
+            return 0
 
         labels_on_issue = {l["name"] if isinstance(l, dict) else l
                            for l in issue.get("labels") or []}
