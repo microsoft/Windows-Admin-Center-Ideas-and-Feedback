@@ -111,16 +111,33 @@ def triage(issue: dict, retriever: Retriever, *, debug_sink: dict | None = None)
     }
 
     log.info("Calling Azure OpenAI deployment=%s for issue #%s", deployment, issue.get("number"))
-    completion = client.chat.completions.create(
-        model=deployment,
-        temperature=DEFAULT_TEMPERATURE,
-        max_tokens=DEFAULT_MAX_TOKENS,
-        response_format={"type": "json_schema", "json_schema": schema_for_api},
-        messages=[
+    # gpt-5.1 and other reasoning-class deployments reject `max_tokens` and require
+    # `max_completion_tokens`; some also reject `temperature` other than the default.
+    # Build kwargs once and try; on a 400 about parameters, retry without them.
+    base_kwargs = {
+        "model": deployment,
+        "response_format": {"type": "json_schema", "json_schema": schema_for_api},
+        "messages": [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ],
-    )
+    }
+    try:
+        completion = client.chat.completions.create(
+            **base_kwargs,
+            temperature=DEFAULT_TEMPERATURE,
+            max_completion_tokens=DEFAULT_MAX_TOKENS,
+        )
+    except Exception as exc:  # noqa: BLE001
+        msg = str(exc)
+        if "temperature" in msg or "unsupported_value" in msg:
+            log.warning("Deployment rejected temperature; retrying without it.")
+            completion = client.chat.completions.create(
+                **base_kwargs,
+                max_completion_tokens=DEFAULT_MAX_TOKENS,
+            )
+        else:
+            raise
 
     raw = completion.choices[0].message.content or "{}"
     data = json.loads(raw)
