@@ -71,11 +71,62 @@ $headers = @{ Authorization = "Basic $basicAuth"; Accept = 'application/json' }
 $projectUrl = "https://dev.azure.com/$Organization/_apis/projects/$Project`?api-version=7.0"
 Write-Host ""
 Write-Host "Validating against $projectUrl ..."
-try {
-  $proj = Invoke-RestMethod -Uri $projectUrl -Headers $headers -Method Get -TimeoutSec 30
+$projResp = Invoke-WebRequest -Uri $projectUrl -Headers $headers -Method Get `
+              -TimeoutSec 30 -SkipHttpErrorCheck -MaximumRedirection 0
+$projStatus = [int]$projResp.StatusCode
+$contentType = ($projResp.Headers.'Content-Type' | Select-Object -First 1)
+
+if ($projStatus -ge 200 -and $projStatus -lt 300 -and $contentType -match 'application/json') {
+  try {
+    $proj = $projResp.Content | ConvertFrom-Json
+  } catch {
+    $proj = $null
+  }
+}
+else {
+  $proj = $null
+}
+
+if ($null -ne $proj -and $proj.name) {
   Write-Host ("  Project found: {0} (id={1})" -f $proj.name, $proj.id) -ForegroundColor Green
-} catch {
-  Write-Error "PAT validation failed at project read: $($_.Exception.Message)"
+}
+else {
+  # Surface diagnostic detail — this is almost always either a missing
+  # Project-Read scope or an SSO/SAML redirect to login.microsoftonline.com.
+  $bodyExcerpt = ($projResp.Content -as [string])
+  if ($bodyExcerpt) { $bodyExcerpt = $bodyExcerpt.Substring(0, [Math]::Min(500, $bodyExcerpt.Length)) }
+  $fedRedirect = $projResp.Headers.'X-TFS-FedAuthRedirect' | Select-Object -First 1
+  $authChallenge = $projResp.Headers.'WWW-Authenticate' | Select-Object -First 1
+  $diag = @"
+PAT validation failed at project read.
+
+HTTP status         : $projStatus
+Content-Type        : $contentType
+X-TFS-FedAuthRedirect: $fedRedirect
+WWW-Authenticate    : $authChallenge
+
+Body excerpt:
+$bodyExcerpt
+
+Most common causes:
+  1. PAT is missing the 'Project and Team (Read)' scope. When you click
+     'Show all scopes' the preset selections can silently un-check. The
+     PAT needs ALL of these scopes checked:
+        * Project and Team        -> Read
+        * Work Items              -> Read, write, & manage
+     Re-create the PAT and explicitly tick BOTH boxes.
+
+  2. The PAT was created in a different tenant / organization than
+     '$Organization'. Confirm you're signed in as your @microsoft.com
+     identity at https://dev.azure.com/$Organization/_usersSettings/tokens
+     (top-right avatar should show your microsoft.com address).
+
+  3. SSO / SAML challenge. If X-TFS-FedAuthRedirect or WWW-Authenticate
+     points to login.microsoftonline.com, the PAT is being rejected
+     because it isn't SSO-authorized. Re-create it from the link above
+     while signed in via SSO.
+"@
+  Write-Error $diag
   exit 2
 }
 
